@@ -17,6 +17,8 @@ function strace(X::DirectProductSpace{T}, γ) where T
     return DirectProductSpace(x)
 end
 
+function normal_multiplication(X::Space, γ)
+end
 
 
 function ntrace(X::Space, γ)
