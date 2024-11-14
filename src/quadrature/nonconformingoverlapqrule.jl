@@ -1,4 +1,4 @@
-struct NonConformingOverlapQRule{S}
+struct NonConformingOverlapQRule{S} <: AbstractQuadStrat
     conforming_qstrat::S
 end
 

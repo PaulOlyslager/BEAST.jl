@@ -1,4 +1,4 @@
-struct NonConformingTouchQRule{S}
+struct NonConformingTouchQRule{S} <: AbstractQuadStrat
     conforming_qstrat::S
     test_overlapping_edge_index::Int
     bsis_overlapping_edge_index::Int

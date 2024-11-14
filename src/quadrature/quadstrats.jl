@@ -1,6 +1,7 @@
 using InteractiveUtils
+abstract type AbstractQuadStrat end
 
-struct DoubleNumWiltonSauterQStrat{R,S}
+struct DoubleNumWiltonSauterQStrat{R,S} <: AbstractQuadStrat
     outer_rule_far::R
     inner_rule_far::R
     outer_rule_near::R
@@ -12,12 +13,12 @@ struct DoubleNumWiltonSauterQStrat{R,S}
 end
 
 
-struct DoubleNumQStrat{R}
+struct DoubleNumQStrat{R} <: AbstractQuadStrat
     outer_rule::R
     inner_rule::R
 end
 
-struct SauterSchwab3DQStrat{R,S}
+struct SauterSchwab3DQStrat{R,S} <: AbstractQuadStrat
     outer_rule::R
     inner_rule::R
     sauter_schwab_1D::S
@@ -26,7 +27,7 @@ struct SauterSchwab3DQStrat{R,S}
     sauter_schwab_4D::S
 end
 
-struct OuterNumInnerAnalyticQStrat{R}
+struct OuterNumInnerAnalyticQStrat{R} <: AbstractQuadStrat
     outer_rule::R
 end
 
@@ -57,7 +58,7 @@ macro defaultquadstrat(dop, body)
     error("@defaultquadstrat expects a first argument of the for (op,tfs,bfs) or (linform,tfs)")
 end
 
-struct SingleNumQStrat
+struct SingleNumQStrat <: AbstractQuadStrat
     quad_rule::Int
 end
 
