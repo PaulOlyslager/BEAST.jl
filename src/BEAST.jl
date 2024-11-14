@@ -286,7 +286,7 @@ include("solvers/itsolver.jl")
 
 include("utils/plotlyglue.jl")
 
-
+include("quadrature/assign_quadstrat.jl")
 
 
 const x̂ = point(1, 0, 0)
