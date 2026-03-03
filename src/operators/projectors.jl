@@ -53,7 +53,7 @@ end
 function create_it_projector(::Type{IterativePackage{:Krylov}}, SP;left_preconditioner = LinearAlgebra.I, restart=true, itmax = 200, type=eltype(SP), 
     memory = 50, workspace=GMRESWorkspace(SP; type=type, memory=memory), verbose = false, kwargs...)
     M = left_preconditioner
-    return GMRES(SP;M=M, restart=restart, itmax=itmax,memory = memory, workspace=workspace, kwargs...)
+    return GMRES(SP;M=M, restart=restart, itmax=itmax,memory = memory, workspace=workspace, verbose=verbose, kwargs...)
 end
 function assemble(::QHProjector, X::Space; quadstrat=defaultquadstrat)
     error("Not implemented")
