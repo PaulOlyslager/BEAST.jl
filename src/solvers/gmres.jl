@@ -8,8 +8,8 @@ struct GMRES{T} <: LinearMap{T}
     ldiv::Bool
     restart::Bool
     reorthogonalization::Bool
-    atol::T
-    rtol::T
+    atol
+    rtol
     itmax::Int
     timemax::Float64
     verbose::Int
