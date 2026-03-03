@@ -11,6 +11,9 @@ struct GMRESSolver{T,L,R,PL,PR} <: LinearMap{T}
     verbose::Bool
     left_preconditioner::PL
     right_preconditioner::PR
+    orth_meth::IterativeSolvers.OrthogonalizationMethod
+    initially_zero::Bool
+    log::Bool
 end
 
 
@@ -26,7 +29,10 @@ function GMRESSolver(op::L;
     restart=0,
     abstol::R = zero(real(eltype(op))),
     reltol::R = sqrt(eps(real(eltype(op)))),
-    verbose=true) where {L,R<:Real}
+    verbose=true,
+    orth_meth = IterativeSolvers.ModifiedGramSchmidt(),
+    initially_zero = false,
+    log=true) where {L,R<:Real}
 
     if left_preconditioner == nothing
         Pl == nothing && (Pl = IterativeSolvers.Identity())
@@ -59,7 +65,7 @@ function GMRESSolver(op::L;
     PL = typeof(Pl)
     PR = typeof(Pr)
     T = eltype(op)
-    GMRESSolver{T,L,R,PL,PR}(op, maxiter, restart, abstol, reltol, verbose, Pl, Pr)
+    GMRESSolver{T,L,R,PL,PR}(op, maxiter, restart, abstol, reltol, verbose, Pl, Pr, orth_meth, initially_zero, log)
 end
 
 
@@ -70,28 +76,54 @@ function solve(solver::GMRESSolver, b; abstol=solver.abstol, reltol=solver.relto
     T = promote_type(eltype(solver), eltype(b))
     x = similar(Array{T}, axes(solver)[2])
     fill!(x,0)
-    x, ch = solve!(x, solver, b; abstol, reltol)
+    solve!(x, solver, b; abstol, reltol)
 end
 
-
+# function iterative_solver(solver::GMRESSolver, b; abstol=solver.abstol, reltol=solver.reltol)
+#     T = promote_type(eltype(solver), eltype(b))
+#     x = similar(Array{T}, axes(solver)[2])
+#     fill!(x,0)
+#     iterative_solver(x, solver, b; abstol, reltol)
+# end
 function solve!(x, solver::GMRESSolver, b; abstol=solver.abstol, reltol=solver.reltol)
     op = operator(solver)
-    x, ch = IterativeSolvers.gmres!(x, op, b; 
-        log=true, 
+    x = IterativeSolvers.gmres!(x, op, b; 
+        log=solver.log, 
         maxiter=solver.maxiter,
         restart=solver.restart,
         reltol=reltol,
         abstol=abstol,
         verbose=solver.verbose,
         Pl=solver.left_preconditioner,
-        Pr=solver.right_preconditioner)
-    return x, ch
+        Pr=solver.right_preconditioner,
+        orth_meth = solver.orth_meth,
+        initially_zero = solver.initially_zero)
+        
+    return x
 end
+# function iterative_solver(x, solver::GMRESSolver, b; abstol=solver.abstol, reltol=solver.reltol)
+#     op = operator(solver)
+#     x = IterativeSolvers.gmres_iterable!(x, op, b; 
+#         maxiter=solver.maxiter,
+#         restart=solver.restart,
+#         reltol=reltol,
+#         abstol=abstol,
+#         Pl=solver.left_preconditioner,
+#         Pr=solver.right_preconditioner,
+#         orth_meth = IterativeSolvers.DGKS())
+        
+#     return x
+# end
 
+# function solve!(solver::IterativeSolvers.GMRESIterable)
+#     for (i,_) in enumerate(solver)
+        
+#     end
+# end
 
 function Base.:*(A::GMRESSolver, b::AbstractVector)
 
-    x, ch = solve(A, b)
+    A.log ? (x, ch) = solve(A, b) : x = solve(A, b)
     return x
     # T = promote_type(eltype(A), eltype(b))
     # y = BlockedVector{T}(undef, (axes(A,2),))
@@ -104,14 +136,14 @@ Base.size(solver::GMRESSolver) = reverse(size(solver.linear_operator))
 
 function LinearAlgebra.mul!(y::AbstractVecOrMat, solver::GMRESSolver, x::AbstractVector)
     fill!(y,0)
-    y, ch = solve!(y, solver, x)
-    solver.verbose && println("Number of iterations: ", ch.iters)
-    ch.isconverged || error("Iterative solver did not converge.")
+    solve!(y, solver, x)
+    # solver.verbose && println("Number of iterations: ", ch.iters)
+    # ch.isconverged || error("Iterative solver did not converge.")
     return y
 end
 
-LinearAlgebra.adjoint(A::GMRESSolver) = GMRESSolver(adjoint(A.linear_operator); maxiter=A.maxiter, restart=A.restart, abstol=A.abstol, reltol=A.reltol, verbose=A.verbose, Pl=A.right_preconditioner, Pr=A.left_preconditioner)
-LinearAlgebra.transpose(A::GMRESSolver) = GMRESSolver(transpose(A.linear_operator); maxiter=A.maxiter, restart=A.restart, abstol=A.abstol, reltol=A.reltol, verbose=A.verbose, Pl=A.right_preconditioner, Pr=A.left_preconditioner)
+LinearAlgebra.adjoint(A::GMRESSolver) = GMRESSolver(adjoint(A.linear_operator); maxiter=A.maxiter, restart=A.restart, abstol=A.abstol, reltol=A.reltol, verbose=A.verbose, Pl=A.right_preconditioner, Pr=A.left_preconditioner, orth_meth = A.orth_meth, initially_zero = A.initially_zero, log = A.log)
+LinearAlgebra.transpose(A::GMRESSolver) = GMRESSolver(transpose(A.linear_operator); maxiter=A.maxiter, restart=A.restart, abstol=A.abstol, reltol=A.reltol, verbose=A.verbose, Pl=A.right_preconditioner, Pr=A.left_preconditioner, orth_meth = A.orth_meth, initially_zero = A.initially_zero, log = A.log)
 
 
 
