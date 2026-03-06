@@ -77,7 +77,7 @@ function solve!(x, solver::GMRES{<: Complex}, b::AbstractVector{<:Complex})
     # @show solver.workspace
 
      
-        Krylov.gmres!(ws, solver.A, Vector(b);
+        Krylov.gmres!(ws, 1/norm(Vector(b))*solver.A, 1/norm(Vector(b))*Vector(b);
             M = solver.M, 
             N = solver.N,
             # memory = solver.memory, 
