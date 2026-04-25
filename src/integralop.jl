@@ -90,18 +90,17 @@ function assemblechunk!(biop::IntegralOperator, tfs::Space, bfs::Space, store;
     qs = if CompScienceMeshes.refines(tgeo, bgeo)
         TestRefinesTrialQStrat(quadstrat)
     elseif CompScienceMeshes.refines(bgeo, tgeo)
+        # @show typeof(bgeo)
+        # @show typeof(tgeo)
         TrialRefinesTestQStrat(quadstrat)
     else
         quadstrat
     end
-
+    
     qd = quaddata(biop, tshapes, bshapes, test_elements, bsis_elements, qs)
     qdl = quaddatathreadlocal(biop, tshapes, bshapes, test_elements, bsis_elements, qd, qs)
     zlocal = zeros(scalartype(biop, tfs, bfs), 2num_tshapes, 2num_bshapes)
-    # return biop,
-    #     tfs, test_elements, tad, tcells,
-    #     bfs, bsis_elements, bad, bcells,
-    #     qd, zlocal, store, qs
+    # @show "after" qs
     assemblechunk_body!(biop,
         tfs, test_elements, tad, tcells,
         bfs, bsis_elements, bad, bcells,
@@ -143,7 +142,8 @@ function assemblechunk_body!(biop,
     test_shapes = refspace(test_space)
     trial_shapes = refspace(trial_space)
 
-   
+    # @show "inside" quadstrat
+
     verbose = (length(test_elements) > 256)
     myid = Threads.threadid()
     verbose && myid == 1 && print("dots out of 10: ")
