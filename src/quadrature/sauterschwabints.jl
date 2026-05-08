@@ -142,7 +142,7 @@ function sauterschwab_parameterized(igdp, rule::SauterSchwabQuadrature1D.SauterS
 end
 
 function sauterschwab_reorder(test_vertices, trial_vertices, rule::SauterSchwabStrategy)
-    I, J, _, _ = SauterSchwabQuadrature.reorder(test_vertices, trial_vertices, rule)
+    I, J = SauterSchwabQuadrature.reorder_fast(test_vertices, trial_vertices, rule)
 
     return I, J
 end

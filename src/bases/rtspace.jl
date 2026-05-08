@@ -13,6 +13,7 @@ Base.similar(space::RTBasis{T,M,P} where {T,M,P}, geo, fns, pos) = RTBasis(geo, 
 
 positions(rt) = rt.pos
 refspace(space::RTBasis{T}) where {T} = RTRefSpace{T}()
+refspace(space::Type{<:RTBasis{T}}) where {T} = RTRefSpace{T}
 subset(rt::RTBasis,I) = RTBasis(rt.geo, rt.fns[I], rt.pos[I])
 
 

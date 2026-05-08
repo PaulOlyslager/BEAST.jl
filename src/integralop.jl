@@ -96,11 +96,16 @@ function assemblechunk!(biop::IntegralOperator, tfs::Space, bfs::Space, store;
     end
 
     qd = quaddata(biop, tshapes, bshapes, test_elements, bsis_elements, qs)
+    qdl = quaddatathreadlocal(biop, tshapes, bshapes, test_elements, bsis_elements, qd, qs)
     zlocal = zeros(scalartype(biop, tfs, bfs), 2num_tshapes, 2num_bshapes)
+    # return biop,
+    #     tfs, test_elements, tad, tcells,
+    #     bfs, bsis_elements, bad, bcells,
+    #     qd, zlocal, store, qs
     assemblechunk_body!(biop,
         tfs, test_elements, tad, tcells,
         bfs, bsis_elements, bad, bcells,
-        qd, zlocal, store; quadstrat=qs)
+        qdl, zlocal, store, qs)
 end
 
 @testitem "assemble!: zero sized block" begin
@@ -134,17 +139,17 @@ end
 function assemblechunk_body!(biop,
         test_space, test_elements, test_assembly_data, test_cell_ptrs,
         trial_space, trial_elements, trial_assembly_data, trial_cell_ptrs,
-        qd, zlocal, store; quadstrat)
+        qd, zlocal, store, quadstrat)
 
     test_shapes = refspace(test_space)
     trial_shapes = refspace(trial_space)
 
-
+   
     verbose = (length(test_elements) > 256)
     myid = Threads.threadid()
     verbose && myid == 1 && print("dots out of 10: ")
     todo, done, pctg = length(test_elements), 0, 0
-    for (p,(tcell,tptr)) in enumerate(zip(test_elements, test_cell_ptrs))
+  for (p,(tcell,tptr)) in enumerate(zip(test_elements, test_cell_ptrs))
         for (q,(bcell,bptr)) in enumerate(zip(trial_elements, trial_cell_ptrs))
 
         fill!(zlocal, 0)
@@ -171,11 +176,11 @@ function assemblechunk_body!(biop,
     verbose && myid == 1 && println("")
 end
 
-
+quaddatathreadlocal(biop, tshapes, bshapes, test_elements, trial_elements, qd, quadstrat) = qd
 function assemblechunk_body_colored!(biop,
         test_space, testad, testelementids,
         trial_space, trialad, trialelementids,
-        qd, store, scheduler; quadstrat)
+        qd, store, scheduler, quadstrat)
 
     test_shapes = refspace(test_space)
     trial_shapes = refspace(trial_space)
@@ -188,7 +193,10 @@ function assemblechunk_body_colored!(biop,
 
     @tasks for p in testelementids
         @set scheduler = scheduler
-        @local zlocal = zeros(scalartype(biop, test_space, trial_space), num_tshapes, num_bshapes)
+        @local begin zlocal = zeros(scalartype(biop, test_space, trial_space), num_tshapes, num_bshapes)
+             qd = quaddatathreadlocal(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd, quadstrat)
+        end
+
         tcell, tptr = test_elements[p], test_cell_ptrs[p]
     
         for q in trialelementids

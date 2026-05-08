@@ -339,6 +339,8 @@ include("composedoperators/potentials.jl")
 include("composedoperators/trace.jl")
 include("composedoperators/analytic_excitation.jl")
 
+include("quadrature/simddoublenum.jl")
+include("quadrature/dynamic_quadstrat.jl")
 const x̂ = point(1, 0, 0)
 const ŷ = point(0, 1, 0)
 const ẑ = point(0, 0, 1)
