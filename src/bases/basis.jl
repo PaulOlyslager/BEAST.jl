@@ -136,13 +136,13 @@ struct Shape{T}
 end
 
 struct AssemblyData{T}
-    data::Array{Tuple{Int,T},3}
+    data::Array{Tuple{Int64,T},3}
 end
 
 Base.getindex(ad::AssemblyData, c, r) = ADIterator(c,r,size(ad.data,1),ad)
 
 struct AssemblyDataEl{T}
-    element_index::Int
+    element_index::Int64
     ad::AssemblyData{T}
 end
 Base.length(adp::AssemblyDataEl) = size(adp.ad.data,2)
@@ -152,11 +152,11 @@ function Base.getindex(adp::AssemblyDataEl, r)
     ADIterator(adp.element_index,r,size(ad.data,1),ad)
 end
 
-struct ADIterator{T}
-    c::Int
-    r::Int
-    I::Int
-    ad::AssemblyData{T}
+struct ADIterator{T,U <: AssemblyData{T}}
+    c::Int64
+    r::Int64
+    I::Int64
+    ad::U
 end
 
 function Base.iterate(it::ADIterator, i = 1)

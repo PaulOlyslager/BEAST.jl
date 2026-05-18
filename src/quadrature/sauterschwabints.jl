@@ -68,6 +68,30 @@ end
     return ex
 end
 
+function _krondot_simd(a::SVector{3,SVector{3,T}}, b::SVector{3,SVector{3,T}}) where {T}
+    a1 = SMatrix{3,3,T}(hcat(a...))
+    b1 = SMatrix{3,3,T}(hcat(b...))
+    c = a1' * b1
+    return c
+end
+function _krondot_simd5(a::SMatrix{3,3,T,9}, b::SMatrix{3,3,T,9}) where {T}
+    c = a * b
+    return c
+end 
+function dot_simd2(a::SVector{3,T}, b::SVector{3,T}) where {T}
+    out = zero(T)
+    c = a .* b
+    for i in 1:3
+        @inbounds out += c[i]
+    end
+    return sqrt(out)
+end
+function dot_simd3(a::SVector{3,T}, b::SVector{3,T}) where {T}
+    out = zero(T)
+    c = a .* b
+    out = c[1] + c[2] + c[3]
+    return sqrt(out)
+end
 function _integrands_gen(::Type{U}, ::Type{V}) where {U<:SVector{N}, V<:SVector{M}} where {M,N}
     ex = :(SMatrix{N,M}(()))
     for m in 1:M

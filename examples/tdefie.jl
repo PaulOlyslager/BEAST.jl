@@ -5,8 +5,8 @@ using CompScienceMeshes, BEAST, LinearAlgebra
 X = raviartthomas(Γ)
 
 Δt = 0.1
-Nt = 200
-T = timebasisshiftedlagrange(Δt, Nt, 3)
+Nt = 30
+T = timebasisc0d1(Δt, Nt)
 U = timebasisdelta(Δt, Nt)
 
 V = X ⊗ T
@@ -25,7 +25,20 @@ E = planewave(polarisation, direction, derive(gaussian), 1.0)
 SL = TDMaxwell3D.singlelayer(speedoflight=1.0, numdiffs=1)
 
 tdefie = @discretise SL[j′,j] == -1.0E[j′]   j∈V  j′∈W
-xefie = BEAST.motsolve(tdefie)
+@time A = assemble(SL, W, V)
+
+T = eltype(A)
+S = zeros(T, size(A)[1:2])
+BEAST.ConvolutionOperators.timeslice!(S, A, 1)
+
+iS = inv(S)
+b = assemble(E, W)
+
+nt = numfunctions(temporalbasis(V))
+@time marchonintime(iS, A, b, nt)
+
+
+@profview xefie = BEAST.motsolve(tdefie)
 
 import PlotlyJS
 PlotlyJS.plot(xefie[1,:])
@@ -33,9 +46,19 @@ fcr, geo = facecurrents(xefie[:,125], X)
 PlotlyJS.plot(patch(geo, norm.(fcr)))
 
 
+function test()
+    A = rand(1000,1000)
+    v =rand(1000)
+    Binv = lu(A)
+    for i in 1:200
+        v = Binv\v
+        for j in 1:21
+            v = A*v
+        end
+    end
+end
 
-
-
+@time test()
 
 Xefie, Δω, ω0 = fouriertransform(xefie, Δt, 0.0, 2)
 ω = collect(ω0 .+ (0:Nt-1)*Δω)

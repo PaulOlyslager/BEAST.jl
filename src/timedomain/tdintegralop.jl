@@ -276,6 +276,7 @@ function assemble_chunk!(op::RetardedPotential, testST, trialST, store;
         τ = testels[p]
         for q in eachindex(trialels)
             σ = trialels[q]
+            
 	        for r in rings(τ,σ,ΔR)
 				r > numfunctions(timebasisfunction) && continue
 	            ι = ring(r,ΔR)

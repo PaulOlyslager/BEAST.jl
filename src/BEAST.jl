@@ -25,7 +25,8 @@ using NestedUnitRanges
 
 using Infiltrator
 using TestItems
-
+using BenchmarkTools
+using Unroll
 import LinearAlgebra: cross, dot
 import LinearAlgebra: ×, ⋅
 
