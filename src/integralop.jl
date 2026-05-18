@@ -101,13 +101,6 @@ function assemblechunk!(biop::IntegralOperator, tfs::Space, bfs::Space, store;
     qd = quaddata(biop, tshapes, bshapes, test_elements, bsis_elements, qs)
     qdl = quaddatathreadlocal(biop, tshapes, bshapes, test_elements, bsis_elements, qd, qs)
     zlocal = zeros(scalartype(biop, tfs, bfs), 2num_tshapes, 2num_bshapes)
-    # @show "after" qs
-    # assemblechunk_body!(biop,
-    #     tfs, test_elements, tad, tcells,
-    #     bfs, bsis_elements, bad, bcells,
-    #     qd, zlocal, store; quadstrat=qs)
-
-    # @show length(qd.tpo/ints), length(qd.bpoints), maximum(tcells), maximum(bcells)
 
     assemblechunk_body!(biop, tfs, bfs,
         test_elements, tcells, tad, eachindex(tcells),
@@ -147,7 +140,7 @@ end
 function assemblechunk_body!(biop, test_space, trial_space,
     test_elements, test_element_ptrs, test_assembly_data, active_test_els,
     trial_elements, trial_element_ptrs, trial_assembly_data, active_trial_els,
-    qd, zlocal, store; quadstrat, scheduler=:serial)
+    qd, zlocal, store, quadstrat; scheduler=:serial)
 
     num_tshapes = size(test_assembly_data.data,2)
     num_bshapes = size(trial_assembly_data.data,2)
@@ -191,14 +184,9 @@ function assemblechunk_body!(biop, test_space, trial_space,
                             store(a*zb, m, n)
         end end end end end
 
-        # done += 1
-        # new_pctg = round(Int, done / todo * 100)
-        # if new_pctg > pctg + 9
-        #     verbose && myid == 1 && print(".")
-        #     pctg = new_pctg
-        # end
+
     end
-    # verbose && myid == 1 && println("")
+
 end
 
 quaddatathreadlocal(biop, tshapes, bshapes, test_elements, trial_elements, qd, quadstrat) = qd
@@ -207,14 +195,14 @@ function assemblechunk_body_colored!(biop,
         trial_space, trialad, trialelementids,
         qd, store, scheduler, quadstrat)
 
-#     test_shapes = refspace(test_space)
-#     trial_shapes = refspace(trial_space)
+    test_shapes = refspace(test_space)
+    trial_shapes = refspace(trial_space)
 
-#     test_elements, test_assembly_data, test_cell_ptrs = testad
-#     trial_elements, trial_assembly_data, trial_cell_ptrs = trialad
+    test_elements, test_assembly_data, test_cell_ptrs = testad
+    trial_elements, trial_assembly_data, trial_cell_ptrs = trialad
 
-#     num_tshapes = numfunctions(test_shapes, domain(chart(geometry(test_space), first(geometry(test_space)))))
-#     num_bshapes = numfunctions(trial_shapes, domain(chart(geometry(trial_space), first(geometry(trial_space)))))
+    num_tshapes = numfunctions(test_shapes, domain(chart(geometry(test_space), first(geometry(test_space)))))
+    num_bshapes = numfunctions(trial_shapes, domain(chart(geometry(trial_space), first(geometry(trial_space)))))
 
     @tasks for p in testelementids
         @set scheduler = scheduler
@@ -224,27 +212,27 @@ function assemblechunk_body_colored!(biop,
 
         tcell, tptr = test_elements[p], test_cell_ptrs[p]
     
-#         for q in trialelementids
-#             bcell, bptr = trial_elements[q], trial_cell_ptrs[q]
-#             fill!(zlocal, 0)
-#             @inline qrule = quadrule(biop, test_shapes, trial_shapes, p, tcell, q, bcell, qd, quadstrat)
-#             momintegrals!(zlocal, biop,
-#                 test_space,  tptr, tcell,
-#                 trial_space, bptr, bcell, qrule)
-#             for j in 1:length(trial_assembly_data[q])
-#                 QQ = @view trial_assembly_data.data[:,j,q]
-#                 for i in 1:length(test_assembly_data[p])
-#                 zij = zlocal[i,j]
-#                 PP = @view test_assembly_data.data[:,i,p]
-#                 for (n,b) in QQ
-#                     n < 1 && break
-#                     iszero(b) && continue
-#                     zb = zij*b
-#                     for (m,a) in PP
-#                         m < 1 && break
-#                         iszero(a) && continue
-#                         store(a*zb, m, n)
-# end end end end end end end
+        for q in trialelementids
+            bcell, bptr = trial_elements[q], trial_cell_ptrs[q]
+            fill!(zlocal, 0)
+            @inline qrule = quadrule(biop, test_shapes, trial_shapes, p, tcell, q, bcell, qd, quadstrat)
+            momintegrals!(zlocal, biop,
+                test_space,  tptr, tcell,
+                trial_space, bptr, bcell, qrule)
+            for j in 1:length(trial_assembly_data[q])
+                QQ = @view trial_assembly_data.data[:,j,q]
+                for i in 1:length(test_assembly_data[p])
+                zij = zlocal[i,j]
+                PP = @view test_assembly_data.data[:,i,p]
+                for (n,b) in QQ
+                    n < 1 && break
+                    iszero(b) && continue
+                    zb = zij*b
+                    for (m,a) in PP
+                        m < 1 && break
+                        iszero(a) && continue
+                        store(a*zb, m, n)
+end end end end end end end
 
 struct AssembleblockbodyFunctor{B,T1,T2,T3,T4,T5,T6,T7,T8,T9}
     biop::B
