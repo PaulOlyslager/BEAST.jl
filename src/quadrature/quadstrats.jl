@@ -118,15 +118,15 @@ end
     newvalsexp = []
     for key in Keys
         if key == :nestedqd
-            newkeys.push(key)
-            newvalsexp.push(:(quadcache($biop, $test_shapes, $trial_shapes, $test_elements, $trial_elements, $qd.nestedqd, $quadstrat.nested_strat)))
+            push!(newkeys,key)
+            push!(newvalsexp,:(quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd.nestedqd, quadstrat.nested_strat)))
         else
-            newkeys.push(key)
-            newvalsexp.push(:(qd.$key))
+            push!(newkeys,key)
+            push!(newvalsexp,:(qd.$key))
         end
     end
     ex = quote
-        return NamedTuple{($(newkeys...,))}((($(newvalsexp...,)),))
+        return NamedTuple{($(newkeys...,))}(($(newvalsexp...),))
     end
     return ex
 end

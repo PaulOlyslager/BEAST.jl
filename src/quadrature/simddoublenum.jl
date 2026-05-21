@@ -59,6 +59,12 @@ struct SIMDDoubleQuadRule{P,Q}
   g_cache::Vector{Matrix{Float64}}
 end
 
+
+struct SIMDDoubleNumQStrat{R} <: AbstractQuadStrat
+    outer_rule::R 
+    inner_rule::R
+end
+
 """
 momintegrals!(biop, tshs, bshs, tcell, bcell, interactions, strat)
 
@@ -147,7 +153,7 @@ TransposedStrat(a::SIMDDoubleQuadRule) = a
     tshs::TSpace, bshs::BSpace, tcell, bcell, z, strat::SIMDDoubleQuadRule) where {T,Op1,Kern,Op2,TSpace,BSpace}
     M = numfunctions(tshs, domain(tcell))
     N = numfunctions(bshs, domain(bcell))
-    Core.println("M = $M, N = $N")
+    # Core.println("M = $M, N = $N")
     # load variables
     vars = _load_variables(Kern)
 
@@ -162,8 +168,8 @@ TransposedStrat(a::SIMDDoubleQuadRule) = a
     get_greenimagexp = get_greenimag(Kern)
 
 
-    op1 = operationexp(Op1,Kern,bshs)
-    op2 = operationexp(Op2,tshs,Kern)
+    op1 = operationexp(Op1)
+    op2 = operationexp(Op2)
     trialspacetovarmapexp = trialspacetovarmap(BSpace)
     testspacetovarmapexp = testspacetovarmap(TSpace)
     loadvaluestestexp = loadvalues_test(TSpace)
@@ -191,7 +197,7 @@ TransposedStrat(a::SIMDDoubleQuadRule) = a
             for ki in 1:$M
                 zre = 0.0
                 zim = 0.0
-            @turbo for wimpid in eachindex(wimps.weights)
+            for wimpid in eachindex(wimps.weights)
                             $loadvaluestrialexp # loads the trial space values at the given quadrature point into variables
                             jy = wimps.weights[wimpid]
                     
@@ -223,6 +229,7 @@ TransposedStrat(a::SIMDDoubleQuadRule) = a
 
             return z
     end
+    # display(ex)
     return ex
 end
 valuetype(::Type{RTRefSpace{T}}) where {T} = SVector{3,T}
@@ -297,11 +304,11 @@ function _kernexp(::Type{<:HH3DGradGreen})
         greenimz = gradgreenim * rz
     end
 end
-operationexp(::Type{Cross}, Kern, bshs) = _cross_exp()
-operationexp(::Type{Dot}, Kern, bshs) = _dot_exp()
-operationexp(::Type{STimesS}, Kern, bshs) = _scalar_times_scalar_exp()
-operationexp(::Type{VTimesS}, Kern, bshs) = _vector_times_scalar_exp()
-operationexp(::Type{STimesV}, Kern, bshs) = _scalar_times_vector_exp()
+operationexp(::Type{Cross}) = _cross_exp()
+operationexp(::Type{Dot}) = _dot_exp()
+operationexp(::Type{STimesS}) = _scalar_times_scalar_exp()
+operationexp(::Type{VTimesS}) = _vector_times_scalar_exp()
+operationexp(::Type{STimesV}) = _scalar_times_vector_exp()
 
 function trialspacetovarmap(a::Type{T}) where {T <: RefSpace}
 
@@ -385,9 +392,9 @@ function _dot_exp()
 end
 function _cross_exp()
     quote
-        solx = ry*lz - rz*ly
-        soly = rz*lx - rx*lz
-        solz = rx*ly - ry*lx
+        solx = -ry*lz + rz*ly
+        soly = -rz*lx + rx*lz
+        solz = -rx*ly + ry*lx
         rx = solx
         ry = soly
         rz = solz
@@ -443,27 +450,39 @@ function assign_green_imag(kern::Type{<:HH3DGradGreen})
     end
 end
 
-struct RefSIMDDoubleNumRule{R} <: RefQuadStrat
-    outer_rule::R 
-    inner_rule::R
-end
 
 function quadrule(operator::IntegralOperator,
     local_test_basis, local_trial_basis,
-    test_id, test_element, trial_id, trial_element, qd)
-    qr = SIMDDoubleQuadRule(qd.tpoints[1, test_id], qd.bpoints[1, trial_id], cache.cache)
+    test_id, test_element, trial_id, trial_element, qd, qs::SIMDDoubleNumQStrat)
+    qr = SIMDDoubleQuadRule(qd.tpoints[1, test_id], qd.bpoints[1, trial_id], qd.cache)
 end
 function quaddata(operator::IntegralOperator,
     local_test_basis, local_trial_basis,
-    test_elements, trial_elements, rule::RefSIMDDoubleNumRule) 
+    test_elements, trial_elements, qs::SIMDDoubleNumQStrat) 
     derivative_needed = requires_derivative(operator)
-    (tpoints = quadpoints_simd(local_test_basis, test_elements, (rule.outer_rule,),derivative_needed), 
-     bpoints = quadpoints_simd(local_trial_basis, trial_elements, (rule.inner_rule,),derivative_needed))
+    (tpoints = quadpoints_simd(local_test_basis, test_elements, (qs.outer_rule,),derivative_needed), 
+     bpoints = quadpoints_simd(local_trial_basis, trial_elements, (qs.inner_rule,),derivative_needed))
 end
 
 function quadcache(operator::IntegralOperator,
     local_test_basis, local_trial_basis,
-    test_elements, trial_elements, qd, rule::RefSIMDDoubleNumRule) 
+    test_elements, trial_elements, qd, qs::SIMDDoubleNumQStrat) 
     g_cache = generate_cacheSIMDDoubleNum(operator, qd.tpoints, qd.bpoints)
     return (tpoints = qd.tpoints, bpoints = qd.bpoints, cache = g_cache,)
+end
+
+@testitem "SIMD DoubleNumSauter Quadrature" begin
+    using CompScienceMeshes
+
+    Γ = meshcuboid(1.0,1.0,1.0,0.3)
+    X = raviartthomas(Γ);
+
+    ops = [BEAST.CompDoubleInt(x->x, BEAST.Dot(),BEAST.HH3DGreen(1.0*im),BEAST.STimesV(), x->x),
+        BEAST.CompDoubleInt(x->x, BEAST.Dot(),BEAST.HH3DGradGreen(1.0*im),BEAST.Cross(), x->x),
+        Maxwell3D.singlelayer(wavenumber = 1.0)]
+    for op2 in ops
+        M3 = assemble(op2,X,X,quadstrat = BEAST.DoubleNumSauterQstrat(6,6,6,6,6,6));
+        M4 = assemble(op2,X,X,quadstrat = BEAST.SauterQStrat(BEAST.SIMDDoubleNumQStrat(6,6),6,6,6,6));
+        @test isapprox(M3,M4, atol = 1e-5)
+    end
 end

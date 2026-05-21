@@ -5,7 +5,7 @@
 #     inner_rule_near::R
 # end
 DoubleNumWiltonBogaertQStrat(a,b,c,d) = BogaertQStrat(WiltonQStrat(DoubleNumQStrat(a,b),c,d))
-struct BogaertQStrat{NestedStrat} <: AbstractQuadStrat 
+struct BogaertQStrat{NestedStrat} <: NestedQuadStrat 
     nested_strat::NestedStrat
 end
 

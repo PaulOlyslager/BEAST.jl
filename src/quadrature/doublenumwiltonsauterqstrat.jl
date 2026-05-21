@@ -8,7 +8,7 @@
 #     sauter_schwab_common_edge::S
 #     sauter_schwab_common_vert::S
 # end
-struct WiltonQStrat{NestedStrat, R} <: AbstractQuadStrat
+struct WiltonQStrat{NestedStrat, R} <: NestedQuadStrat
     nested_strat::NestedStrat
     outer_rule_near::R
     inner_rule_near::R

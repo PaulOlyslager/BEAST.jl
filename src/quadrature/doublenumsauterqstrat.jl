@@ -6,7 +6,7 @@
 #     sauter_schwab_common_edge::S
 #     sauter_schwab_common_vert::S
 # end
-struct SauterQStrat{NestedStrat,S} <: AbstractQuadStrat
+struct SauterQStrat{NestedStrat,S} <: NestedQuadStrat
     nested_strat::NestedStrat
     sauter_schwab_common_tetr::S
     sauter_schwab_common_face::S
