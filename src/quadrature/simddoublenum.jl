@@ -25,7 +25,12 @@ end
 function generate_cacheSIMDDoubleNum(operator::MWSingleLayer3D, test_quad_data, trial_quad_data) 
     a = length(test_quad_data[1,1].weights)
     b = length(trial_quad_data[1,1].weights)
-    return [zeros(a,b) for _ in 1:10]
+    return [zeros(a,b) for _ in 1:2]
+end
+function generate_cacheSIMDDoubleNum(operator::MWDoubleLayer3D, test_quad_data, trial_quad_data) 
+    a = length(test_quad_data[1,1].weights)
+    b = length(trial_quad_data[1,1].weights)
+    return [zeros(a,b) for _ in 1:6]
 end
 cachesizeSIMDDoubleNum(::Type{<:HH3DGreen}) = 2
 cachesizeSIMDDoubleNum(::Type{<:HH3DGradGreen}) = 6
@@ -50,7 +55,7 @@ function quadpoints_simd(f, els, rules, derivative_needed)
 end
 
 requires_derivative(::MWSingleLayer3D) = true
-requires_derivative(::CompDoubleKern) = false
+requires_derivative(a) = false
 
 
 struct SIMDDoubleQuadRule{P,Q}
@@ -70,7 +75,10 @@ momintegrals!(biop, tshs, bshs, tcell, bcell, interactions, strat)
 
 Function for the computation of moment integrals using simple double quadrature.
 """
-
+function momintegrals!(biop::MWDoubleLayer3D,
+    tshs, bshs, tcell, bcell, z, strat::SIMDDoubleQuadRule)
+    momintegrals!(CompDoubleKern(Dot(),BEAST.HH3DGradGreen(biop.gamma),Cross()), tshs, bshs, tcell, bcell, z, strat::SIMDDoubleQuadRule)
+end
 
 function momintegrals!(biop::MWSingleLayer3D,
     tshs, bshs, tcell, bcell, z, strat::SIMDDoubleQuadRule)
@@ -479,7 +487,8 @@ end
 
     ops = [BEAST.CompDoubleInt(x->x, BEAST.Dot(),BEAST.HH3DGreen(1.0*im),BEAST.STimesV(), x->x),
         BEAST.CompDoubleInt(x->x, BEAST.Dot(),BEAST.HH3DGradGreen(1.0*im),BEAST.Cross(), x->x),
-        Maxwell3D.singlelayer(wavenumber = 1.0)]
+        Maxwell3D.singlelayer(wavenumber = 1.0),
+        Maxwell3D.doublelayer(wavenumber = 1.0)]
     for op2 in ops
         M3 = assemble(op2,X,X,quadstrat = BEAST.DoubleNumSauterQstrat(6,6,6,6,6,6));
         M4 = assemble(op2,X,X,quadstrat = BEAST.SauterQStrat(BEAST.SIMDDoubleNumQStrat(6,6),6,6,6,6));
