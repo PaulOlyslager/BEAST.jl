@@ -479,6 +479,9 @@ function quadcache(operator::IntegralOperator,
     return (tpoints = qd.tpoints, bpoints = qd.bpoints, cache = g_cache,)
 end
 
+# frequently used quadstrats
+SIMDDoubleNumSauterQStrat(a,b,c,d,e,f) = SauterQStrat(SIMDDoubleNumQStrat(a,b),c,d,e,f)
+
 @testitem "SIMD DoubleNumSauter Quadrature" begin
     using CompScienceMeshes
 

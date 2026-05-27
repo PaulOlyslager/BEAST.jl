@@ -103,33 +103,28 @@ The type of the returned quadrature rule will help in deciding which method of
 """
 function quadrule end
 
-function quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd, quadstrat::NestedQuadStrat)
-   qdnew = (qd..., cache = nothing, nestedqd = quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd.nestedqd, quadstrat.nested_strat))
-   
-   
-    if :nested_strat in fieldnames(typeof(quadstrat)) 
-        return (nestedcache = quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd.nestedqd, quadstrat.nested_strat),)
-    end
-    return ()
+"""
+    quadcache(operator, test_refspace, trial_refspace, test_elements, trial_elements, quad_data, quadstrat)
+
+This function is called for each thread separately and adds temporary writable memory 
+to the quaddata named tuple if necessary. If not, it leaves the quaddata as is.
+"""
+function quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd, quadstrat)
+    return qd
 end
 
 @generated function quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd::NamedTuple{Keys}, quadstrat::NestedQuadStrat) where {Keys}
-    newkeys = []
     newvalsexp = []
     for key in Keys
         if key == :nestedqd
-            push!(newkeys,key)
             push!(newvalsexp,:(quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd.nestedqd, quadstrat.nested_strat)))
         else
-            push!(newkeys,key)
             push!(newvalsexp,:(qd.$key))
         end
     end
     ex = quote
-        return NamedTuple{($(newkeys...,))}(($(newvalsexp...),))
+        return NamedTuple{($(Keys...,))}(($(newvalsexp...),))
     end
     return ex
 end
-function quadcache(biop, test_shapes, trial_shapes, test_elements, trial_elements, qd, quadstrat)
-    return qd
-end
+
